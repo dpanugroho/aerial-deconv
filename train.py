@@ -9,26 +9,30 @@ Created on Fri Feb 17 21:55:33 2017
 import numpy as np
 import time
 import tensorflow as tf
-
+import os
 import config
 
 HI = 0
 
 
-selected_model = config.model
-if selected_model == "MODEL_3":
-    import model_3ed as Model
-elif selected_model == "MODEL_4":
-    import model_4ed as Model
-elif selected_model == "MODEL_5":
-    import model_5ed as Model
-else :
-    print("Invalid input for model selection!")
-def train(n_epochs, trainData, trainLabelOneHot, validationData, validationLabelOneHot):
+#selected_model = config.model
+
+def train(n_epochs, trainData, trainLabelOneHot, validationData, validationLabelOneHot, selected_model, ksize):
+    if selected_model == "MODEL_3":
+        import model_3ed as Model
+    elif selected_model == "MODEL_4":
+        import model_4ed as Model
+    elif selected_model == "MODEL_5":
+        import model_5ed as Model
+    elif selected_model == "MODEL_6":
+        import model_6ed as Model
+    else :
+        print("Invalid input for model selection!")
+    
     nrclass = config.nrclass
 
     # Kernels
-    ksize = config.ksize
+#    ksize = config.ksize
     fsize = config.fsize
     initstdev = 0.01
     
@@ -40,6 +44,8 @@ def train(n_epochs, trainData, trainLabelOneHot, validationData, validationLabel
         'ce3': tf.get_variable("ce3", shape = [ksize, ksize, fsize, fsize], initializer = initfun),
         'ce4': tf.get_variable("ce4", shape = [ksize, ksize, fsize, fsize], initializer = initfun),
         'ce5': tf.get_variable("ce5", shape = [ksize, ksize, fsize, fsize], initializer = initfun),
+        'ce6': tf.get_variable("ce6", shape = [ksize, ksize, fsize, fsize], initializer = initfun),
+        'cd6': tf.get_variable("cd6", shape = [ksize, ksize, fsize, fsize], initializer = initfun),
         'cd5': tf.get_variable("cd5", shape = [ksize, ksize, fsize, fsize], initializer = initfun),
         'cd4': tf.get_variable("cd4", shape = [ksize, ksize, fsize, fsize], initializer = initfun),
         'cd3': tf.get_variable("cd3", shape = [ksize, ksize, fsize, fsize], initializer = initfun),
@@ -54,6 +60,8 @@ def train(n_epochs, trainData, trainLabelOneHot, validationData, validationLabel
         'be3': tf.get_variable("be3", shape = [fsize], initializer = tf.constant_initializer(value=0.0)),
         'be4': tf.get_variable("be4", shape = [fsize], initializer = tf.constant_initializer(value=0.0)),
         'be5': tf.get_variable("be5", shape = [fsize], initializer = tf.constant_initializer(value=0.0)),
+        'be6': tf.get_variable("be6", shape = [fsize], initializer = tf.constant_initializer(value=0.0)),
+        'bd6': tf.get_variable("bd6", shape = [fsize], initializer = tf.constant_initializer(value=0.0)),        
         'bd5': tf.get_variable("bd5", shape = [fsize], initializer = tf.constant_initializer(value=0.0)),
         'bd4': tf.get_variable("bd4", shape = [fsize], initializer = tf.constant_initializer(value=0.0)),
         'bd3': tf.get_variable("bd3", shape = [fsize], initializer = tf.constant_initializer(value=0.0)),
@@ -62,6 +70,7 @@ def train(n_epochs, trainData, trainLabelOneHot, validationData, validationLabel
     }
         
     ntrain = len(trainData)
+    nval = len(validationData)
     height = config.height 
     width = config.width
     nrclass = config.nrclass
@@ -80,7 +89,7 @@ def train(n_epochs, trainData, trainLabelOneHot, validationData, validationLabel
     
     #%%
     
-    pred = Model.Model(x, weights, biases, keepprob)
+    pred = Model.Model(x, weights, biases, keepprob, ksize)
     lin_pred = tf.reshape(pred, shape=[-1, nrclass])
     lin_y = tf.reshape(y, shape=[-1, nrclass])
     cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=lin_pred, labels=lin_y))
@@ -88,9 +97,11 @@ def train(n_epochs, trainData, trainLabelOneHot, validationData, validationLabel
     # Accuracy
     corr = tf.equal(tf.argmax(y,3), tf.argmax(pred, 3)) 
     accr = tf.reduce_mean(tf.cast(corr, "float"))
+    
+    
     optm = tf.train.AdamOptimizer(0.0001).minimize(cost)
     
-    batch_size = 1
+    batch_size = config.batch_size
     n_epochs = n_epochs
     
     print ("Functions ready")
@@ -100,7 +111,11 @@ def train(n_epochs, trainData, trainLabelOneHot, validationData, validationLabel
         # you need to initialize all variables
         tf.global_variables_initializer().run()
         saver = tf.train.Saver()
-        checkpoint = tf.train.latest_checkpoint("model_chekcpoint/")
+        
+        save_dir = "model_chekcpoint/"+selected_model+"_"+str(ksize)+"/"
+        if not os.path.exists(save_dir):
+            os.makedirs(save_dir)
+        checkpoint = tf.train.latest_checkpoint(save_dir)
         print ("checkpoint: %s" % (checkpoint))
         if resumeTraining == False:
             print ("Memulai pelatihan dari awal.")
@@ -131,16 +146,25 @@ def train(n_epochs, trainData, trainLabelOneHot, validationData, validationLabel
             trainAcc = np.mean(trainAcc)
             
             # Run test
-            valLoss = sess.run(cost, feed_dict={x: validationData, y: validationLabelOneHot, keepprob: 1.})
-            valAcc = sess.run(accr, feed_dict={x: validationData, y: validationLabelOneHot, keepprob: 1.})
+            with tf.device('/gpu:1'):
+                valLoss =[]; valAcc=[]
+                for _ in range(num_batch):
+                    valRandidx = np.random.randint(nval, size=batch_size)
+                    
+                    valBatchData = validationData[valRandidx]
+                    valBatchLabel = validationLabelOneHot[valRandidx]
+                    valLoss.append(sess.run(cost, feed_dict={x: valBatchData, y: valBatchLabel, keepprob: 1.}))
+                    valAcc.append(sess.run(accr, feed_dict={x: valBatchData, y: valBatchLabel, keepprob: 1.}))
+                valLoss=np.mean(valLoss)
+                valAcc = np.mean(valAcc)
 
             end  = int(round(time.time() * 1000))
             print ("[%02d/%02d] trainLoss: %.4f trainAcc: %.2f valLoss: %.4f valAcc: %.2f time : %.2f" 
                    % (epoch_i, n_epochs, trainLoss, trainAcc, valLoss, valAcc,  float((end-start))/1000))
 
             if epoch_i == config.n_epoch-1:
-                # Save
-                saver.save(sess, 'model_checkpoints/', global_step = epoch_i)
+#                Save
+                saver.save(sess, save_dir, global_step = epoch_i)
 
     return valLoss, valAcc
 

@@ -1,0 +1,2 @@
+,height,width,model,kernel_size,number_of_kernel,dropout_keep_probability,n_epoch,cv_loss,cv_acc
+0,400,400,MODEL_3,3,64,1,10,0.11656631752848626,0.9527173042297363

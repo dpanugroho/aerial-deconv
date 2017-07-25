@@ -30,7 +30,7 @@ def DenseToOneHot(labels_dense, num_classes):
 
 def load_data(task):
     if task == "test":        
-        testPath = os.getcwd() + '/dataset/data_resized/test/sat/'
+        testPath = os.getcwd() + '/dataset/dataset_'+str(config.width)+'x'+str(config.height)+'/test/sat/'
         imglist = glob.glob(testPath + '/*.png')
         print ("%d Test images" % (len(imglist)))
         
@@ -51,18 +51,17 @@ def load_data(task):
     else:
         if task == "train":
             # Training data
-            path1 = os.getcwd() + '/dataset/data_resized/train/sat/'
-            path2 = os.getcwd() + '/dataset/data_resized/train/map/'
+            path1 = os.getcwd() + '/dataset/dataset_'+str(config.width)+'x'+str(config.height)+'/train/sat/'
+            path2 = os.getcwd() + '/dataset/dataset_'+str(config.width)+'x'+str(config.height)+'/train/map/'
         elif task == "valid":
             ## Validation data
-            path1 = os.getcwd() + '/'+'/dataset/data_resized/valid/sat/'
-            path2 = os.getcwd() + '/'+ '/dataset/data_resized/valid/map/'
+            path1 = os.getcwd() + '/'+'/dataset/dataset_'+str(config.width)+'x'+str(config.height)+'/valid/sat/'
+            path2 = os.getcwd() + '/'+ '/dataset/dataset_'+str(config.width)+'x'+str(config.height)+'/valid/map/'
     
 
     
         imglist = glob.glob(path1 + '/*.png')
         annotlist = glob.glob(path2 + '/*.png')
-        print(task,":")
         print ("%d images" % (len(imglist)))
         print ("%d annotations" % (len(annotlist)))
            
@@ -94,5 +93,3 @@ def load_data(task):
                 oneHot = DenseToOneHot(single, nrclass) # (367,) => (367, 22)
                 labelsOneHot[:, row, col, :] = oneHot
         return data, labelsOneHot
-
-#load_data('test')

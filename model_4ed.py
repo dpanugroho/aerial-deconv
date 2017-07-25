@@ -12,7 +12,7 @@ import config
 nrclass = config.nrclass
 
 # Kernels
-ksize = config.ksize
+#ksize = config.ksize
 fsize = config.fsize
 initstdev = 0.01
 
@@ -20,11 +20,11 @@ initfun = tf.random_normal_initializer(mean=0.0, stddev=initstdev)
 # initfun = None
 
 # DeconvNet Model
-def Model(_X, _W, _b, _keepprob):
+def Model(_X, _W, _b, _keepprob, ksize):
     height = config.height
     width = config.width
     fsize = config.fsize
-    ksize = config.ksize
+#    ksize = config.ksize
     
     use_bias = 1
     # Encoder 128x128

@@ -21,11 +21,11 @@ import config
 
 
 # DeconvNet Model
-def Model(_X, _W, _b, _keepprob):
+def Model(_X, _W, _b, _keepprob,ksize):
     height = config.height
     width = config.width
     fsize = config.fsize
-    ksize = config.ksize
+#    ksize = config.ksize
     
     use_bias = 1
     # Encoder 128x128
