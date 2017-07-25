@@ -2,5 +2,6 @@
 
 *.pyc
 *.tiff
-model_checkpoins/
+model_checkpoints/
+model_checkpoint/
 train_log/
